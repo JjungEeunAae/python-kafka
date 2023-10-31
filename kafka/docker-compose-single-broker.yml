@@ -1,0 +1,41 @@
+version: '3'
+
+services:
+  zookeeper:
+    container_name: zookeeper
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+  kafka:
+    user: root
+    image: confluentinc/cp-kafka:latest
+    hostname: kafka
+    container_name: kafka-broker1
+    depends_on:
+      - zookeeper
+    ports:
+      - "2001:2001"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      ZOOKEEPER_SASL_ENABLED: 'false'
+      KAFKA_ADVERTISED_LISTENERS: LISTENER_DOCKER_INTERNAL://kafka:12001,LISTENER_DOCKER_EXTERNAL://localhost:2001      # 외부접속은 External url을 변경하시면 됩니다.
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_DOCKER_INTERNAL:PLAINTEXT,LISTENER_DOCKER_EXTERNAL:SASL_PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: LISTENER_DOCKER_INTERNAL
+      KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: PLAIN
+      KAFKA_SASL_ENABLED_MECHANISMS: PLAIN
+      KAFKA_OPTS: "-Djava.security.auth.login.config=/etc/kafka/kafka_server_jaas.conf"
+    volumes:
+      - ./configs/kafka_server_jaas.conf:/etc/kafka/kafka_server_jaas.conf
+  kafdrop:
+    container_name: kafdrop
+    image: obsidiandynamics/kafdrop
+    restart: "no"
+    ports: 
+      - "2000:9000"
+    environment:
+      KAFKA_BROKER_CONNECT: "kafka:12001"
+    depends_on:
+      - kafka
